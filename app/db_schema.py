@@ -1,7 +1,7 @@
 from sqlalchemy.orm import DeclarativeBase, sessionmaker, Mapped, mapped_column
 from sqlalchemy import create_engine, String 
 
-print("URL Database Initialized!")
+print("\033[31mINFO:     URL Database Initialized.\033[0m")
 
 class Base(DeclarativeBase):
     pass
@@ -19,8 +19,8 @@ class URL(Base):
         self.original_url = original_url
         self.hashed_url = hashed_url
 
-engine = create_engine("postgresql+psycopg://brayley:shortener_pw@localhost:5433/shortener") # factory to create database sessions (communication)
-Base.metadata.create_all(bind=engine) # using engine to communicate, update database with new tables based on schema/class inheriting from 'Base' (initialization)
+engine = create_engine("postgresql+psycopg://brayley:shortener_pw@localhost:5433/shortener") 
+Base.metadata.create_all(bind=engine) 
 
 
 

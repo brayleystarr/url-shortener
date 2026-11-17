@@ -9,6 +9,8 @@ def crc32_hash(plain_text : str) -> str:
     Returns: 
         CRC32 hash of plain-text.
     """
-    return str(hex(zlib.crc32(plain_text.encode())))
+    return str(hex(zlib.crc32(plain_text.encode())))[2:]
+
+
 
 

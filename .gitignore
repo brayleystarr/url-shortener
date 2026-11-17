@@ -1,0 +1,10 @@
+# virtual-environment
+.venv
+
+# makefile 
+Makefile 
+
+# cache
+__pycache__
+
+
