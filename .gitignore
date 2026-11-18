@@ -7,4 +7,12 @@ Makefile
 # cache
 __pycache__
 
+# claude code
+.claude/
+CLAUDE.md
+
+# todo list 
+TODO.md 
+
+
 

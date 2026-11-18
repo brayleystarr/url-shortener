@@ -1,4 +1,4 @@
-from sqlalchemy.orm import DeclarativeBase, sessionmaker, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import create_engine, String 
 
 print("\033[31mINFO:     URL Database Initialized.\033[0m")

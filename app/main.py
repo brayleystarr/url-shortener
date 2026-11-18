@@ -1,46 +1,52 @@
-from fastapi import FastAPI, Depends, status, HTTPException
-from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
-import app.db_schema as db_schema 
+from fastapi import FastAPI, status, HTTPException
+from fastapi.responses import JSONResponse,RedirectResponse, FileResponse
+import app.db_schema as db_schema
 from app.db_schema import engine, URL
 from app.hash import crc32_hash
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from app.models import URLIn
+from fastapi.staticfiles import StaticFiles
 
 app = FastAPI()
 
-@app.post("/shorten", status_code=status.HTTP_201_CREATED) 
+@app.get("/")
+async def home():
+    return FileResponse("app/static/index.html")
+
+@app.post("/shorten") 
 async def shorten_URL(http_body : URLIn):
-    """Add long URL instance to database. 
+    """Add long URL to database and return it's short URL. 
 
     Args: 
-        long_url: Original URL string. 
+        long_url: Original, long URL string. 
 
     Returns: 
-        Shortened URL string. 
+        JSON containing the shortened URL string. 
     """
-    
     # engine creates new session connection to database
     with Session(engine) as session: 
+        # fetch long URL from http contents
         original_url = http_body.url
 
-        # URL exists in database, redirect!
-        if session.execute(select(URL).where(URL.original_url == original_url)).all():
-            short_url = session.scalars(select(URL).where(URL.original_url == original_url)).all()[0].hashed_url
-            return JSONResponse(content=None, status_code=301, headers={"Location" : "https://localhost:8000/" + short_url}) # TODO: THIS WILL LIKELY BE CHANGED BEFORE FINAL PUSH
-
+        # URL in database?
+        short_url_exists = session.scalar(select(URL).where(URL.original_url == original_url))
+        if short_url_exists:
+            return JSONResponse(content={"hashed_url" : "http://localhost:8000/" + str(short_url_exists.hashed_url)}, status_code=status.HTTP_200_OK)
+        
+        # create URL hash
         hashed_url = str(crc32_hash(original_url)[:7])
         seed = "please_hire_me_😀!"
         stmt = select(URL).where(URL.hashed_url == hashed_url)
         extended_url = original_url
 
-        # collision?
+        # URL hash collision?
         while session.execute(stmt).all(): 
             extended_url = extended_url + seed 
             hashed_url = str(crc32_hash(extended_url)[:7])
             stmt = select(URL).where(URL.hashed_url == hashed_url)
             
-        # add URL record to table
+        # push URL to table
         url_row = URL(original_url, hashed_url) 
         session.add(url_row)
 
@@ -48,10 +54,8 @@ async def shorten_URL(http_body : URLIn):
         session.commit()
 
         # communicate changes to frontend / client
-        return {"hashed_url" : "https://localhots:8000/" + str(hashed_url)}
-
-
-
+        return JSONResponse(content={"hashed_url" : "http://localhost:8000/" + str(hashed_url)}, status_code=status.HTTP_201_CREATED)
+    
 @app.get("/{tiny_url}")
 async def url_redirect(tiny_url : str):
     """Redirect short URL to long URL. 
@@ -70,3 +74,6 @@ async def url_redirect(tiny_url : str):
     # redirect to long URL of interest     
     print(url_record.original_url)
     return RedirectResponse(url=url_record.original_url, status_code=301)
+
+# mount static frontend home GUI
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
