@@ -1,11 +1,23 @@
-services: 
-  db: 
+services:
+  app:
+    environment: 
+      URL_CONVERSION_STRATEGY: "crc32" #"b-67" 
+    build: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
     image: postgres:16
     container_name: url-shortener-db
-    environment: 
+    environment:
       POSTGRES_USER: brayley
       POSTGRES_PASSWORD: shortener_pw
       POSTGRES_DB: shortener
-    ports: 
-      - "5433:5432"
-    
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U brayley -d shortener"]
+      interval: 5s
+      timeout: 5s
+      retries: 10

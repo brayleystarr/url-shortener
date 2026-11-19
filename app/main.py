@@ -2,16 +2,22 @@ from fastapi import FastAPI, status, HTTPException
 from fastapi.responses import JSONResponse,RedirectResponse, FileResponse
 import app.db_schema as db_schema
 from app.db_schema import engine, URL
-from app.hash import crc32_hash
+from app.hash import hash_url
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from app.models import URLIn
 from fastapi.staticfiles import StaticFiles
+import os
 
+# fetch URL conversion strat (toggle in the Docker compose file)
+URL_CONVERSION_STRATEGY = os.environ("URL_CONVERSION_STRATEGY")
+
+# init URL-shortener application
 app = FastAPI()
 
 @app.get("/")
 async def home():
+    """Root path fetches frontend."""
     return FileResponse("app/static/index.html")
 
 @app.post("/shorten") 
@@ -35,7 +41,7 @@ async def shorten_URL(http_body : URLIn):
             return JSONResponse(content={"hashed_url" : "http://localhost:8000/" + str(short_url_exists.hashed_url)}, status_code=status.HTTP_200_OK)
         
         # create URL hash
-        hashed_url = str(crc32_hash(original_url)[:7])
+        hashed_url = str(hash_url(original_url)[:7])
         seed = "please_hire_me_😀!"
         stmt = select(URL).where(URL.hashed_url == hashed_url)
         extended_url = original_url
@@ -43,7 +49,7 @@ async def shorten_URL(http_body : URLIn):
         # URL hash collision?
         while session.execute(stmt).all(): 
             extended_url = extended_url + seed 
-            hashed_url = str(crc32_hash(extended_url)[:7])
+            hashed_url = str(hash_url(extended_url)[:7])
             stmt = select(URL).where(URL.hashed_url == hashed_url)
             
         # push URL to table
@@ -73,7 +79,9 @@ async def url_redirect(tiny_url : str):
             raise HTTPException(status_code=404, detail="Shortened URL not found.") 
     # redirect to long URL of interest     
     print(url_record.original_url)
-    return RedirectResponse(url=url_record.original_url, status_code=301)
+    return RedirectResponse(url=url_record.original_url, 
+                            status_code=301,                            
+                            headers={"Cache-Control": "max-age=86400"}) # browser will cache URL mapping for one day max
 
 # mount static frontend home GUI
 app.mount("/static", StaticFiles(directory="app/static"), name="static")

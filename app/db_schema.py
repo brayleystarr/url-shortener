@@ -19,7 +19,7 @@ class URL(Base):
         self.original_url = original_url
         self.hashed_url = hashed_url
 
-engine = create_engine("postgresql+psycopg://brayley:shortener_pw@localhost:5433/shortener") 
+engine = create_engine("postgresql+psycopg://brayley:shortener_pw@db:5432/shortener") 
 Base.metadata.create_all(bind=engine) 
 
 
